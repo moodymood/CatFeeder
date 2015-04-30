@@ -101,6 +101,8 @@ void ShowReaderDetails() {
 	if ((v == 0x00) || (v == 0xFF)) {
 		Serial.println(F("WARNING: Communication failure, is the MFRC522 properly connected?"));
 	}
+
+        turnAllLedOn(); 
 }
 
 
