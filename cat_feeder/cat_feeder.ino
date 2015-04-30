@@ -73,9 +73,19 @@ void loop() {
   // print out the value to the serial monitor
   dispenseFoodButton();
   t.update();
-  potVal = analogRead(POT_PIN);
-//  Serial.println("pot value");
-//  Serial.println(potVal);
+  int potValNew = analogRead(POT_PIN);
+  if(potVal != potValNew){//Value has changed - go in to a different mode!
+    potVal = potValNew;
+    changeTimer(potVal);
+  }
+}
+
+void changeTimer(int potential){
+  //Display a new value to the LCD
+  int percentage = ((float)potential / (float)1024)*100;
+  updateLCD(percentage);
+  //Update globals
+  FOOD_TIME = 20 + (percentage);
 }
 
 void timerTick(){
