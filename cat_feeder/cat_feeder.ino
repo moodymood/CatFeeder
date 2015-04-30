@@ -1,21 +1,7 @@
 /*
-  Arduino Starter Kit example
- Project 5  - Servo Mood Indicator
-
- This sketch is written to accompany Project 5 in the
- Arduino Starter Kit
-
- Parts required:
- servo motor
- 10 kilohm potentiometer
- 2 100 uF electrolytic capacitors
-
- Created 13 September 2012
- by Scott Fitzgerald
-
- http://arduino.cc/starterKit
-
- This example code is part of the public domain
+  OmNomCat
+  Servo control
+  
  */
 
 // include the servo library
