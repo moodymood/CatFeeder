@@ -40,34 +40,53 @@
 
 #include <SPI.h>
 #include <MFRC522.h>
+#include "Timer.h"
 
 #define RST_PIN		9		// 
 #define SS_PIN		10		//
 
-MFRC522 mfrc522(SS_PIN, RST_PIN);	// Create MFRC522 instance
+#define CAT_0 0
+#define CAT_1 1
 
-// Led
+#define CAT_ID0 " 196 204 250 53"
+#define CAT_ID1 " 50 123 75 43"
 
-// charlie_plexing.ino
-// use 3 output pins to drive 6 leds in a charlie plexed configuration
+MFRC522 mfrc522(SS_PIN, RST_PIN);	// Create MFRC522 instance"
+Timer t;
 
-int ledPins[] = {5,6,7};
 
-const int NUMBER_OF_PINS = sizeof(ledPins)/sizeof(ledPins[0]);
+
+int ledPinsCat[2][3] = {{2,3,4}, {5,6,7}};
+
+const int NUMBER_OF_PINS = sizeof(ledPinsCat[0])/sizeof(ledPinsCat[0][0]);
 const int NUMBER_OF_LEDS = NUMBER_OF_PINS * (NUMBER_OF_PINS - 1);
 
 byte ledPairs[NUMBER_OF_LEDS/2][2] = {{2,1}, {1,0}, {2,0}};
+
+int MAX_TIME = 10000;
+int TIMER_TICK = 1000;
+
+int CAT_TIME[2] = {MAX_TIME ,MAX_TIME};
+int tickEvent = 0;
+
 
 void setup() {
 	Serial.begin(9600);		// Initialize serial communications with the PC
 	while (!Serial);		// Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
 	SPI.begin();			// Init SPI bus
 	mfrc522.PCD_Init();		// Init MFRC522
-	ShowReaderDetails();	// Show details of PCD - MFRC522 Card Reader details
+
 	Serial.println(F("Scan PICC to see UID, type, and data blocks..."));
+
+        tickEvent = t.every(TIMER_TICK, doSomething);
+        resetTimer(CAT_1);
+        resetTimer(CAT_0);
 }
 
 void loop() {
+   
+        t.update();
+        
 	// Look for new cards
 	if ( ! mfrc522.PICC_IsNewCardPresent()) {
 		return;
@@ -78,36 +97,75 @@ void loop() {
 		return;
 	}
 
-	// Dump debug info about the card; PICC_HaltA() is automatically called
-	mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
-
-
-        turnAllLedOn();
-}
-
-void ShowReaderDetails() {
-	// Get the MFRC522 software version
-	byte v = mfrc522.PCD_ReadRegister(mfrc522.VersionReg);
-	Serial.print(F("MFRC522 Software Version: 0x"));
-	Serial.print(v, HEX);
-	if (v == 0x91)
-		Serial.print(F(" = v1.0"));
-	else if (v == 0x92)
-		Serial.print(F(" = v2.0"));
-	else
-		Serial.print(F(" (unknown)"));
-	Serial.println("");
-	// When 0x00 or 0xFF is returned, communication probably failed
-	if ((v == 0x00) || (v == 0xFF)) {
-		Serial.println(F("WARNING: Communication failure, is the MFRC522 properly connected?"));
-	}
-
-        turnAllLedOn(); 
+        String scannedTagID = getTagID();
+        resetTimer(getCatFromTagID(scannedTagID));
+        
+        Serial.print("Read tag ID: "); Serial.println(scannedTagID);  
+             
 }
 
 
 
-void lightLed(int led) {
+int getCatFromTagID(String tagID){
+  if(tagID.equals(CAT_ID0)){
+    return CAT_0;
+  }
+  else if (tagID.equals(CAT_ID1)){
+    return CAT_1;
+  }
+  else
+    return -1;
+}
+
+
+String getTagID(){
+ //Serial.print(F("Card UID:"));
+ String tagID = "";
+        for (byte i = 0; i < mfrc522.uid.size; i++) {
+                tagID = tagID + (mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " ");
+                tagID = tagID + (mfrc522.uid.uidByte[i]);
+        }
+  return tagID;
+}
+
+
+int timerTick(int currCat){
+  return CAT_TIME[currCat] -= TIMER_TICK;
+}
+
+
+void resetTimer(int currCat){
+  if(CAT_TIME[CAT_0] < 0 && CAT_TIME[CAT_1] < 0)
+    tickEvent = t.every(TIMER_TICK, doSomething);
+  CAT_TIME[currCat] = MAX_TIME;  
+  
+}
+
+
+void updateLedPinsCat(int currCat){
+  
+  int led = (CAT_TIME[currCat] / TIMER_TICK) * 6 / (MAX_TIME / TIMER_TICK);
+  Serial.println(led);
+  //lightLed(CAT_TIME[currCat]/TIMER_TICK, ledPinsCat[currCat]);
+  lightLed(led, ledPinsCat[currCat]);
+
+}
+
+
+void doSomething(){
+  if(timerTick(CAT_0) >= 0){
+    updateLedPinsCat(CAT_0);
+  }
+  if(timerTick(CAT_1) >= 0){
+    updateLedPinsCat(CAT_1); 
+  }  
+  
+  if(CAT_TIME[CAT_0] < 0 && CAT_TIME[CAT_1] < 0)
+    t.stop(tickEvent);
+}
+
+
+void lightLed(int led, int ledPins[]) {
 
   int indexA = ledPairs[led/2][0];
   int indexB = ledPairs[led/2][1];
@@ -136,9 +194,6 @@ void lightLed(int led) {
   }
 }
 
-void turnAllLedOn() {
-  for (int i = 0; i < NUMBER_OF_LEDS; i++) {
-    lightLed(i);
-    delay(1000);
-  }
-}
+
+
+
