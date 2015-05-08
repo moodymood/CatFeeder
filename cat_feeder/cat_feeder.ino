@@ -1,18 +1,18 @@
 /*
   OmNomCat
   Servo control
-  
  */
 
 // include the servo library
 #include <Servo.h>
+// include the timer library
 #include "Timer.h"
-
-// include the library code:
+// include the LCD library:
 #include <LiquidCrystal.h>
 
-// initialize the library with the numbers of the interface pins
+// initialize the LCD with the numbers of the interface pins
 LiquidCrystal lcd(7, 6, 5, 4, 3, 2);
+
 Servo myServo;  // create a servo object
 Timer t;
 
@@ -30,6 +30,7 @@ int FOOD_TIME_COUNTER = 20;
 int tickEvent = 0;
 int potVal;
 
+//Custom designed character for the LCD
 byte newChar[8] = {
         B11111,
         B10101,
@@ -41,28 +42,30 @@ byte newChar[8] = {
         B11111
 };
 
+//Setup the arduino first
 void setup() {
   Serial.begin(9600); 
   
   myServo.attach(SERVO_PIN); 
-  tickEvent = t.every(TIMER_TICK, doSomething);
+  tickEvent = t.every(TIMER_TICK, customTimer);
   
   lcd.createChar(7, newChar);
   lcd.begin(16, 2);
 
 }
 
+//Update the LCD with percentage value
 void updateLCD(int percentage){
   Serial.println(percentage);
   //16 per line
-  lcd.clear();
+  lcd.clear();//Clear the LCD screen
   int row = 0;
-  while(row < 2){
-    lcd.setCursor(0, row);
+  while(row < 2){//Two rows (vertical bars)
+    lcd.setCursor(0, row);//Set to bottom
     float i = 0;
     while(i < percentage){//6.25
-      lcd.write(byte(7));
-      i += (float)100 / (float)16;
+      lcd.write(byte(7));//Write custom byte value
+      i += (float)100 / (float)16;//Equal to 6.25
     }
     row++;
     }
@@ -70,7 +73,6 @@ void updateLCD(int percentage){
 
 
 void loop() {
-  // print out the value to the serial monitor
   dispenseFoodButton();
   t.update();
   int potValNew = analogRead(POT_PIN);
@@ -102,17 +104,18 @@ void timerTick(){
 }
 
 
-void doSomething(){
+void customTimer(){
    resetTimer();
-   //Serial.println("A tick");
    timerTick();
 }
 
 void resetTimer(){
   t.stop(tickEvent);
-  tickEvent = t.every(FOOD_TIME, doSomething);
+  tickEvent = t.every(FOOD_TIME, customTimer);
 }
 
+//Dispense food from the machine.
+//Turn full in both directions with delay to ensure the motor completes the motion
 void dispenseFood(){
     myServo.write(MAX_ANGLE);    
     delay(1000);
@@ -120,7 +123,9 @@ void dispenseFood(){
     delay(1000);
 }
 
-
+//User activated button to skip the timer
+//Check is button is pressed
+//If it is start dispense
 void dispenseFoodButton(){
   if (isButtonPressed()) {
     resetTimer();
@@ -130,12 +135,7 @@ void dispenseFoodButton(){
   delay(300);
 }
 
+//Check if the button is pressed
 boolean isButtonPressed(){
   return (digitalRead(SWITCH_PIN) == HIGH);
 }
-
-
-
-// To to
-// digits to squares
-// NFC + led
